@@ -28,15 +28,13 @@ public class HomeController : Controller
     {
         httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Accept.Clear();
-        httpClient.DefaultRequestHeaders.Add("X-Api-Key", API_KEY);
-        httpClient.DefaultRequestHeaders.Accept.Add(
-            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        httpClient.Timeout = TimeSpan.FromMinutes(5); // Set the timeout to 5 minutes
 
-        string NATIONAL_PARK_API_PATH = BASE_URL + "/parks?limit=20";
+
+        string NATIONAL_PARK_API_PATH = "https://developer.nrel.gov/api/alt-fuel-stations/v1.json?api_key=hkZVQijE8ZvMpchuICzQYDI8gIyPjxVsGzt9h0oI";
         string parksData = "";
 
-        Parks? parks = null;
-
+        root_object s = new root_object();
         //httpClient.BaseAddress = new Uri(NATIONAL_PARK_API_PATH);
         httpClient.BaseAddress = new Uri(NATIONAL_PARK_API_PATH);
 
@@ -47,8 +45,6 @@ public class HomeController : Controller
             HttpResponseMessage response = httpClient.GetAsync(NATIONAL_PARK_API_PATH)
                                                     .GetAwaiter().GetResult();
 
-
-
             if (response.IsSuccessStatusCode)
             {
                 parksData = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
@@ -57,11 +53,17 @@ public class HomeController : Controller
             if (!parksData.Equals(""))
             {
                 //JsonConvert is part of the NewtonSoft.Json Nuget package
-                parks = JsonConvert.DeserializeObject<Parks>(parksData);
+                s = JsonConvert.DeserializeObject<root_object>(parksData);
             }
 
-            dbContext.Parks.Add(parks);
+            foreach (Stations st in s.fuel_stations)
+            {
+                st.Date_Updated = DateTime.Now;
+                dbContext.Fuel_Stations.Add(st);
+
+            }
             await dbContext.SaveChangesAsync();
+
         }
         catch (Exception e)
         {
@@ -69,8 +71,10 @@ public class HomeController : Controller
             Console.WriteLine(e.Message);
         }
 
-        return View(parks);
+        return View();
         //return View();
     }
+
+
 }
 
